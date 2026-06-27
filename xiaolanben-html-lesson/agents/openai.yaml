@@ -1,0 +1,4 @@
+interface:
+  display_name: "Xiaolanben HTML Lesson"
+  short_description: "Turn Xiaolanben sources into a single HTML study lesson."
+  default_prompt: "Use $xiaolanben-html-lesson to create a source-faithful single-file HTML lesson from Xiaolanben examples."
