@@ -1,0 +1,4 @@
+interface:
+  display_name: "小蓝本抖音课"
+  short_description: "小蓝本例题好学版、竖屏短视频、古风音乐与手机端显示检查"
+  default_prompt: "Use $xiaolanben-douyin-lesson to turn selected 小蓝本 examples into a mobile-safe Douyin lesson video."
