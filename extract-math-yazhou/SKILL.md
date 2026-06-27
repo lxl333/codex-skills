@@ -1,79 +1,85 @@
 ---
 name: extract-math-yazhou
-description: Extract high-school math challenge problems from exam papers and answer PDFs or images, especially Chinese Gaokao-style final questions. Use when the user gives exam papers and answer keys and wants the pressure questions extracted into a polished "小蓝本"-style HTML study page with clean crops, answers immediately after each question, MathJax/MathType-style formulas, original answer diagrams preserved, red key ideas, yellow highlighted derivation steps, student-friendly explanations, and strict crop-quality checks.
+description: Extract high-school math challenge problems from exam papers and answer PDFs/images into polished Xiaolanben-style HTML study pages. Use when Codex is given math exam PDFs/images and needs pressure-problem extraction, complete question crops, regenerated answers, full worked explanations, MathJax formulas, crop-quality review sheets, or one-HTML-per-paper专题 pages.
 ---
 
 # Extract Math Yazhou
 
-## Workflow
+## Core Contract
 
-1. Inventory the workspace with `rg --files` and identify question papers, answer keys, and file formats.
-2. For PDFs, render pages to PNG before relying on text extraction. Use text extraction only when the PDF has a real text layer.
-3. Locate requested problem numbers visually or by text. For scanned papers, crop the problem regions and answer regions from page images.
-4. Preserve mathematical fidelity for question stems: embed clean cropped screenshots for formulas, diagrams, tables, and long stems instead of relying on OCR.
-5. Do not show objective-question answer-key screenshots by default. Replace them with a clear answer, student-friendly explanation, key idea, and mistake warning.
-6. For long-answer questions, prefer beautifully typeset text explanations over raw answer screenshots when the solution can be reconstructed reliably. Use MathJax/LaTeX for all formulas so the result looks like MathType. Keep screenshots only as a fallback for unreadable formulas or exact diagrams.
-7. If the official answer includes diagrams, coordinate-system figures, tables, or other visual aids, crop and include them near the matching solution step.
-8. Add a concise "题眼 / 关键步骤" section for every problem. Make the key ideas red in the HTML, and keep them actionable rather than decorative.
-9. Generate a polished HTML study page with a table of contents and one card per problem. The order inside each card must be: question image, answer strip, highlighted key ideas, worked explanation, common-error reminder.
-10. Verify that every requested problem number is present, every image path resolves, and the final page is readable on desktop and mobile widths.
+- Default pressure problems are `7, 8, 11, 14, 18, 19`, unless the user specifies another set.
+- Produce one standalone HTML per paper when multiple papers are provided, unless the user explicitly asks for a combined page.
+- Use the user-approved reference page or template style when provided. Preserve its reading order: question image, answer strip, red key ideas, complete worked explanation, common-error reminder.
+- Treat the artifact as a student learning page, not an answer dump.
 
-## Default Task Contract
+## Required Workflow
 
-- If the user provides a paper and answer key without extra instructions, extract the pressure questions `7, 8, 11, 14, 18, 19`.
-- If the user provides different question numbers, use those instead and keep the same study-page standard.
-- Output a single local HTML file under `output/`, with all supporting crops in an adjacent assets folder.
-- Treat the page as a student learning artifact, not just an answer dump: it should help the student see the answer, the method, the turning point, and the common trap at a glance.
-- Prefer making the artifact directly. Ask questions only when the files or target question numbers are genuinely ambiguous.
+1. Inventory the workspace with `rg --files`; identify papers, answer keys, existing outputs, and any reference template.
+2. Render PDF pages to images before cropping. Use text extraction only as an aid; scanned formulas and diagrams must be checked visually.
+3. Before changing any crop coordinate, first inspect the original PDF page with a 5% or 10% grid overlay, then edit coordinates, regenerate the HTML, and make a final crop review sheet to confirm no previous/next problem is included.
+4. Crop every requested question from the paper, not from the answer key.
+5. Write or reconstruct answers and explanations in a consistent style. Do not paste official answer screenshots into the answer or explanation sections unless the user explicitly asks for them.
+6. Regenerate the HTML after every crop or explanation change.
+7. Validate the output: all requested cards exist, all image paths resolve, no unwanted answer screenshots are referenced, and no generic placeholder explanation remains.
 
-## Extraction Guidance
+## Crop Quality Rules
 
-- Default pressure-test problem set for Gaokao-style papers: `7, 8, 11, 14, 18, 19`, unless the user gives a different list.
-- If the answer key only gives final answers for objective questions, derive short key ideas from the problem statement and final answer; label them as learning整理 or learning hints rather than official full solutions.
-- For long solution problems, reconstruct a clean step-by-step explanation when possible: split by subquestion, state the model or method first, then show the calculation. Keep notation and sequence close to the official answer.
-- Use stable output names: place final HTML in `output/` and image assets in a sibling `*_assets/` folder.
-- Avoid lossy OCR when formulas are dense. A clean screenshot plus a human-written key-step summary is usually more reliable.
+A valid crop must:
+
+- Include the problem number, full stem, all subquestions, all choices/blanks, and every diagram/table belonging to the problem.
+- Exclude unrelated previous/next problems, section headings, page footers, answer-key content, and large blank blocks.
+- Prefer a little clean margin over a tight crop that clips punctuation, formula tails, or right-edge text.
+- Leave extra bottom margin below the last option or final blank, especially when fractions, radicals, subscripts, descenders, or underlines appear near the bottom. Do not accept crops where the D option or last line only “mostly” shows.
+- Match the quality of the best long-answer crops: clean top boundary, clean bottom boundary, no neighboring problem fragments.
+- If a problem crosses pages, or its diagram sits in the previous/adjacent area such as the upper-right of the preceding block, use multiple precise crop blocks and stitch them vertically. Do not use one large rectangle that pulls in neighboring questions or section headings.
+
+When a crop is bad:
+
+- First inspect the original PDF page with a 5% or 10% grid overlay, then change coordinates, regenerate the HTML, and make a crop review sheet proving no upper/lower neighboring problem is included.
+- Do not guess repeatedly from thumbnails. Render the full page with 5% or 10% horizontal grid lines, inspect it, then set fractional crop coordinates.
+- For cross-page or separated figure/stem layouts, crop the stem, choices, and diagram as separate blocks in their natural reading order, then stitch with clean white spacing. Recheck the stitched image at full size before accepting it.
+- Make a contact sheet of the final requested crops and inspect it visually before final response.
+- Inspect the last option/final line at full size; if the bottom of a formula, denominator, radical, or underline is close to the crop edge, widen the bottom boundary and regenerate.
+- If only one paper is being corrected, adjust only that paper’s crop coordinates and regenerate that paper’s HTML.
 
 ## Explanation Rules
 
 - Put the answer immediately after the question image.
-- Use red only for "题眼 / 关键步骤" summary cards.
-- Use yellow text for decisive steps inside the worked explanation, such as a model switch, an equivalent transformation, a monotonicity conclusion, a final range, or the key summation identity.
-- Render all mathematical expressions in answers, explanations, warnings, and key ideas with MathJax/LaTeX when practical.
-- Do not leave rough ASCII such as `3/7`, `C(9,4)`, `X~B(3,1/3)`, `e^(a-4)`, or `f(n+1)/f(n)` in the final HTML when it should be mathematical notation.
-- For objective questions, include enough process for a student to learn the method, but do not invent a long official solution if the answer key only provides a final answer.
-- For long-answer questions, follow the official answer's sequence and notation as closely as possible while making the typography clearer.
+- The answer strip must contain a real answer or a precise conclusion, not “见解析” or “see solution”.
+- The red key-idea block must name the actual turning point of that problem, not a generic topic label.
+- The worked explanation must be problem-specific. Do not leave generic filler such as “先识别题型核心”, “从题面截图中圈出条件”, or “按答案反推”.
+- For objective questions, include enough process for a student to learn why the option is right. If the official key gives only the final option, derive a concise learning explanation from the problem statement.
+- For long-answer questions, split by subquestion and follow the official answer’s sequence when recoverable. Reconstruct with clean MathJax instead of screenshots.
+- Use yellow highlighting for decisive steps in the worked explanation, such as an equivalent transformation, monotonicity conclusion, key recurrence, sample-space count, final range, or geometric model switch.
+- The common-error reminder must be problem-specific and name the actual trap in that problem. Never use production/meta reminders such as “本页只保留题目截图”, “按模板重写”, “逐行对照题面”, or other generic study advice.
+- Render formulas with MathJax/LaTeX. Avoid rough ASCII like `3/7`, `C(9,4)`, `X~B(3,1/3)`, `e^(a-4)`, or `f(n+1)/f(n)` when mathematical notation is appropriate.
+- In HTML text, never leave raw comparison symbols inside formulas where they can be parsed as tags, such as `\(x_1<x_2\)`. Write `\lt`, `\gt`, `\le`, `\ge`, or safe HTML entities so formulas render correctly.
 
 ## HTML Requirements
 
-- Build the study page, not a marketing page.
-- Use a "小蓝本"-style learning layout: question first, answer immediately after the question, then red key idea, then worked explanation, then common-error reminder.
-- Use clear section hierarchy, readable Chinese serif or mixed Chinese fonts, warm paper-like background, restrained blue/gold accents, and enough spacing for focused study.
-- Mark key steps in red using CSS, for example `.key span { color: #d91f26; font-weight: 800; }`.
-- Render formulas with MathJax or an equivalent MathType-like system. Do not leave answer or explanation formulas as rough ASCII when they can be expressed in LaTeX.
-- Highlight decisive derivation steps inside explanations with yellow text, while keeping the separate "题眼" area red.
-- Keep screenshots full-width inside each card with borders and rounded corners.
-- Include source file names in the footer when available.
-
-## Crop Quality Rules
-
-- Inspect every generated question crop visually before final delivery.
-- A valid crop must include the problem number, complete stem, all subquestions, all choices/blanks, and all diagrams or tables belonging to the problem.
-- A valid crop must not include unrelated previous or next questions, section headings, answer-card footers, or clipped right-edge text.
-- Remove large blank areas below the problem, especially under long-answer question stems, but prefer a little clean white margin over a tight crop that risks cutting formulas or punctuation.
-- If a crop has missing top text, clipped right-side text, leftover page footer, unrelated next-section title, or a large blank block below the stem, it fails quality review.
-- If a crop is adjusted, regenerate the HTML and re-check the affected image.
+- Build the study page directly; do not make a marketing page.
+- Keep the Xiaolanben-style layout: warm paper background, restrained blue/gold accents, red key-idea block, readable Chinese fonts, bordered full-width scans.
+- Cards should follow this exact order:
+  1. 题目截图
+  2. 答案
+  3. 题眼 / 关键步骤
+  4. 解析过程
+  5. 易错提醒
+- Use relative image paths that open locally from the HTML.
+- Include source file names in the footer.
 
 ## Validation Checklist
 
+Before final response, verify:
+
+- One HTML per requested paper exists.
 - Requested question numbers are all included.
-- Each card follows this order: question image, answer, red key-step section, worked explanation, warning.
-- Objective questions do not display answer-key screenshots unless explicitly requested.
-- Long answers are typeset clearly or, when screenshots are necessary, not clipped.
-- Formulas in answers render through MathJax/MathType-like notation.
-- Explanation formulas also render through MathJax/MathType-like notation.
-- Yellow highlights appear on the decisive steps inside explanations.
-- Official answer diagrams or tables are included when present.
-- Image links are relative to the HTML and open locally.
-- Crops have passed visual inspection for completeness and neat boundaries.
-- The page remains usable at narrow screen widths.
+- Every card has a resolved question image.
+- No objective-question answer-key screenshots are shown unless explicitly requested.
+- No image `src` contains answer-key crops when the user asked to regenerate answers.
+- No answer strip says “见解析”.
+- No worked explanation contains generic placeholder language.
+- Every common-error reminder states a concrete mathematical pitfall for that exact problem.
+- Formula-heavy answers render through MathJax syntax.
+- Formula-heavy cards have no mojibake or browser-parsed comparison signs; spot-check the rendered HTML around answers and highlighted solution steps.
+- A final crop review contact sheet has been visually inspected, especially for adjusted questions.
